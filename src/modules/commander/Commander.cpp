@@ -132,20 +132,21 @@ static int power_button_state_notification_cb(board_power_button_state_notificat
 #endif // BOARD_HAS_POWER_CONTROL
 
 #ifndef CONSTRAINED_FLASH
-static bool send_vehicle_command(uint16_t cmd, float param1 = NAN, float param2 = NAN, float param3 = NAN,
-				 float param4 = NAN, float param5 = NAN, float param6 = NAN, float param7 = NAN)
+static bool send_vehicle_command(const uint32_t cmd, const float param1 = NAN, const float param2 = NAN,
+				 const float param3 = NAN,  const float param4 = NAN, const double param5 = static_cast<double>(NAN),
+				 const double param6 = static_cast<double>(NAN), const float param7 = NAN)
 {
 	vehicle_command_s vcmd{};
+
+	vcmd.command = cmd;
 
 	vcmd.param1 = param1;
 	vcmd.param2 = param2;
 	vcmd.param3 = param3;
 	vcmd.param4 = param4;
-	vcmd.param5 = (double)param5;
-	vcmd.param6 = (double)param6;
+	vcmd.param5 = param5;
+	vcmd.param6 = param6;
 	vcmd.param7 = param7;
-
-	vcmd.command = cmd;
 
 	uORB::SubscriptionData<vehicle_status_s> vehicle_status_sub{ORB_ID(vehicle_status)};
 	vcmd.source_system = vehicle_status_sub.get().system_id;
@@ -174,7 +175,7 @@ int Commander::custom_command(int argc, char *argv[])
 		if (argc > 1) {
 			if (!strcmp(argv[1], "gyro")) {
 				// gyro calibration: param1 = 1
-				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 1.f, 0.f, 0.f, 0.f, 0.0, 0.0, 0.f);
 
 			} else if (!strcmp(argv[1], "mag")) {
 				if (argc > 2 && (strcmp(argv[2], "quick") == 0)) {
@@ -183,30 +184,30 @@ int Commander::custom_command(int argc, char *argv[])
 
 				} else {
 					// magnetometer calibration: param2 = 1
-					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 1.f, 0.f, 0.f, 0.0, 0.0, 0.f);
 				}
 
 			} else if (!strcmp(argv[1], "accel")) {
 				if (argc > 2 && (strcmp(argv[2], "quick") == 0)) {
 					// accelerometer quick calibration: param5 = 3
-					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 4.f, 0.f, 0.f);
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 4.0, 0.0, 0.f);
 
 				} else {
 					// accelerometer calibration: param5 = 1
-					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f);
+					send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 1.0, 0.0, 0.f);
 				}
 
 			} else if (!strcmp(argv[1], "level")) {
 				// board level calibration: param5 = 2
-				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 2.f, 0.f, 0.f);
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 2.0, 0.0, 0.f);
 
 			} else if (!strcmp(argv[1], "airspeed")) {
 				// airspeed calibration: param6 = 2
-				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 0.f, 2.f, 0.f);
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 0.0, 2.0, 0.f);
 
 			} else if (!strcmp(argv[1], "esc")) {
 				// ESC calibration: param7 = 1
-				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 1.f);
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_PREFLIGHT_CALIBRATION, 0.f, 0.f, 0.f, 0.f, 0.0, 0.0, 1.f);
 
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
@@ -358,6 +359,25 @@ int Commander::custom_command(int argc, char *argv[])
 
 		return (ret ? 0 : 1);
 	}
+
+	if (!strcmp(argv[0], "set_ekf_origin")) {
+		if (argc > 3) {
+
+			double latitude  = atof(argv[1]);
+			double longitude = atof(argv[2]);
+			float  altitude  = atof(argv[3]);
+
+			// Set the ekf NED origin global coordinates.
+			bool ret = send_vehicle_command(vehicle_command_s::VEHICLE_CMD_SET_GPS_GLOBAL_ORIGIN,
+							0.f, 0.f, 0.0, 0.0, latitude, longitude, altitude);
+			return (ret ? 0 : 1);
+
+		} else {
+			PX4_ERR("missing argument");
+			return 0;
+		}
+	}
+
 
 #endif
 
@@ -1142,9 +1162,9 @@ Commander::handle_command(const vehicle_command_s &cmd)
 
 			} else {
 				answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED);
-				// parameter 1: Yaw in degrees
-				// parameter 3: Latitude
-				// parameter 4: Longitude
+				// parameter 1: Heading   (degrees)
+				// parameter 3: Latitude  (degrees)
+				// parameter 4: Longitude (degrees)
 
 				// assume vehicle pointing north (0 degrees) if heading isn't specified
 				const float heading_radians = PX4_ISFINITE(cmd.param1) ? math::radians(roundf(cmd.param1)) : 0.f;
@@ -1196,37 +1216,39 @@ Commander::handle_command(const vehicle_command_s &cmd)
 			break;
 		}
 
-	case vehicle_command_s::VEHICLE_CMD_START_RX_PAIR:
 	case vehicle_command_s::VEHICLE_CMD_CUSTOM_0:
 	case vehicle_command_s::VEHICLE_CMD_CUSTOM_1:
 	case vehicle_command_s::VEHICLE_CMD_CUSTOM_2:
+	case vehicle_command_s::VEHICLE_CMD_DO_CHANGE_SPEED:
+	case vehicle_command_s::VEHICLE_CMD_DO_DIGICAM_CONTROL:
+	case vehicle_command_s::VEHICLE_CMD_DO_GO_AROUND:
+	case vehicle_command_s::VEHICLE_CMD_DO_LAND_START:
 	case vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONTROL:
 	case vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONFIGURE:
 	case vehicle_command_s::VEHICLE_CMD_DO_MOUNT_CONTROL_QUAT:
-	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:
-	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_UAVCAN:
-	case vehicle_command_s::VEHICLE_CMD_PAYLOAD_PREPARE_DEPLOY:
-	case vehicle_command_s::VEHICLE_CMD_PAYLOAD_CONTROL_DEPLOY:
-	case vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION:
-	case vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL:
-	case vehicle_command_s::VEHICLE_CMD_DO_DIGICAM_CONTROL:
 	case vehicle_command_s::VEHICLE_CMD_DO_SET_CAM_TRIGG_DIST:
-	case vehicle_command_s::VEHICLE_CMD_OBLIQUE_SURVEY:
 	case vehicle_command_s::VEHICLE_CMD_DO_SET_CAM_TRIGG_INTERVAL:
-	case vehicle_command_s::VEHICLE_CMD_SET_CAMERA_MODE:
-	case vehicle_command_s::VEHICLE_CMD_SET_CAMERA_ZOOM:
-	case vehicle_command_s::VEHICLE_CMD_DO_CHANGE_SPEED:
-	case vehicle_command_s::VEHICLE_CMD_DO_LAND_START:
-	case vehicle_command_s::VEHICLE_CMD_DO_GO_AROUND:
+	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI:
+	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_LOCATION:
+	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_NONE:
+	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_WPNEXT_OFFSET:
+	case vehicle_command_s::VEHICLE_CMD_DO_TRIGGER_CONTROL:
+	case vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION:
+	case vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE:
 	case vehicle_command_s::VEHICLE_CMD_LOGGING_START:
 	case vehicle_command_s::VEHICLE_CMD_LOGGING_STOP:
 	case vehicle_command_s::VEHICLE_CMD_NAV_DELAY:
-	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI:
 	case vehicle_command_s::VEHICLE_CMD_NAV_ROI:
-	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_LOCATION:
-	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_WPNEXT_OFFSET:
-	case vehicle_command_s::VEHICLE_CMD_DO_SET_ROI_NONE:
-	case vehicle_command_s::VEHICLE_CMD_INJECT_FAILURE:
+	case vehicle_command_s::VEHICLE_CMD_OBLIQUE_SURVEY:
+	case vehicle_command_s::VEHICLE_CMD_PAYLOAD_CONTROL_DEPLOY:
+	case vehicle_command_s::VEHICLE_CMD_PAYLOAD_PREPARE_DEPLOY:
+	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:
+	case vehicle_command_s::VEHICLE_CMD_PREFLIGHT_UAVCAN:
+	case vehicle_command_s::VEHICLE_CMD_SET_CAMERA_MODE:
+	case vehicle_command_s::VEHICLE_CMD_SET_CAMERA_ZOOM:
+	case vehicle_command_s::VEHICLE_CMD_SET_GPS_GLOBAL_ORIGIN:
+
+	case vehicle_command_s::VEHICLE_CMD_START_RX_PAIR:
 		/* ignore commands that are handled by other parts of the system */
 		break;
 
@@ -1259,6 +1281,7 @@ Commander::handle_command_motor_test(const vehicle_command_s &cmd)
 	test_motor_s test_motor{};
 	test_motor.timestamp = hrt_absolute_time();
 	test_motor.motor_number = (int)(cmd.param1 + 0.5f) - 1;
+
 	int throttle_type = (int)(cmd.param2 + 0.5f);
 
 	if (throttle_type != 0) { // 0: MOTOR_TEST_THROTTLE_PERCENT
@@ -4188,6 +4211,9 @@ The commander module contains the state machine for mode switching and failsafe 
 			"Flight mode", false);
 	PRINT_MODULE_USAGE_COMMAND("lockdown");
 	PRINT_MODULE_USAGE_ARG("off", "Turn lockdown off", true);
+	PRINT_MODULE_USAGE_COMMAND("set_ekf_origin");
+	PRINT_MODULE_USAGE_ARG("lat, lon, alt", "Origin Latitude, Longitude, Altitude", false);
+	PRINT_MODULE_USAGE_COMMAND_DESCR("lat|lon|alt", "Origin latitude longitude altitude");
 #endif
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 
