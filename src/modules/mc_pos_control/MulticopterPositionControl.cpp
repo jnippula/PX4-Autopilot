@@ -76,6 +76,18 @@ bool MulticopterPositionControl::init()
 	return true;
 }
 
+template<typename T>
+bool MulticopterPositionControl::paramSet(T &param, float value)
+{
+	if (fabsf(param.get() - value) > FLT_EPSILON) {
+		param.set(value);
+		param.commit_no_notification();
+		return true;
+	}
+
+	return false;
+}
+
 int MulticopterPositionControl::parameters_update(bool force)
 {
 	// check for parameter updates
@@ -87,6 +99,35 @@ int MulticopterPositionControl::parameters_update(bool force)
 		// update parameters from storage
 		ModuleParams::updateParams();
 		SuperBlock::updateParams();
+
+		if (_param_sys_vehicle_resp.get() >= 0.f) {
+			// make it less sensitive at the lower end
+			float responsiveness = _param_sys_vehicle_resp.get() * _param_sys_vehicle_resp.get();
+
+			int num_changed = 0;
+			num_changed += paramSet(_param_mpc_acc_hor, math::lerp(1.f, 15.f, responsiveness));
+			num_changed += paramSet(_param_mpc_acc_hor_max, math::lerp(1.f, 15.f, responsiveness));
+			num_changed += paramSet(_param_mpc_man_y_max, math::lerp(50.f, 300.f, responsiveness));
+
+			if (responsiveness > 0.6f) {
+				num_changed += paramSet(_param_mpc_man_y_tau, 0.f);
+
+			} else {
+				num_changed += paramSet(_param_mpc_man_y_tau, math::lerp(2.f, 0.f, responsiveness));
+			}
+
+			if (responsiveness < 0.5f) {
+				num_changed += paramSet(_param_mpc_tiltmax_air, 45.f);
+
+			} else {
+				num_changed += paramSet(_param_mpc_tiltmax_air, math::min(MAX_SAFE_TILT_DEG, math::lerp(45.f, 70.f,
+							(responsiveness - 0.5f) * 2.f)));
+			}
+
+			if (num_changed > 0) {
+				param_notify_changes();
+			}
+		}
 
 		if (_param_mpc_tiltmax_air.get() > MAX_SAFE_TILT_DEG) {
 			_param_mpc_tiltmax_air.set(MAX_SAFE_TILT_DEG);

@@ -86,6 +86,9 @@ public:
 private:
 	void Run() override;
 
+	template<typename T>
+	bool paramSet(T &param, float value);
+
 	uORB::Publication<vehicle_attitude_setpoint_s>	_vehicle_attitude_setpoint_pub;
 	orb_advert_t _mavlink_log_pub{nullptr};
 
@@ -135,7 +138,13 @@ private:
 		(ParamInt<px4::params::MPC_ALT_MODE>) _param_mpc_alt_mode,
 		(ParamFloat<px4::params::MPC_TILTMAX_LND>) _param_mpc_tiltmax_lnd, /**< maximum tilt for landing and smooth takeoff */
 		(ParamFloat<px4::params::MPC_THR_MIN>) _param_mpc_thr_min,
-		(ParamFloat<px4::params::MPC_THR_MAX>) _param_mpc_thr_max
+		(ParamFloat<px4::params::MPC_THR_MAX>) _param_mpc_thr_max,
+
+		(ParamFloat<px4::params::SYS_VEHICLE_RESP>) _param_sys_vehicle_resp,
+		(ParamFloat<px4::params::MPC_ACC_HOR>) _param_mpc_acc_hor,
+		(ParamFloat<px4::params::MPC_ACC_HOR_MAX>) _param_mpc_acc_hor_max,
+		(ParamFloat<px4::params::MPC_MAN_Y_MAX>) _param_mpc_man_y_max,
+		(ParamFloat<px4::params::MPC_MAN_Y_TAU>) _param_mpc_man_y_tau
 	);
 
 	control::BlockDerivative _vel_x_deriv; /**< velocity derivative in x */
