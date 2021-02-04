@@ -71,8 +71,8 @@ px4_add_module(
 		uorb_converter.h
 		o1heap.c
 		o1heap.h
-		mavcan/pnp.c
-		mavcan/registerinterface.c
+		libcancl/pnp.c
+		libcancl/registerinterface.c
 		${LIBCANARD_DIR}/libcanard/canard.c
 		${LIBCANARD_DIR}/libcanard/canard.h
 	DEPENDS

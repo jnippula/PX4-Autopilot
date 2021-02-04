@@ -63,8 +63,8 @@
 #include "o1heap.h"
 #include "uorb_converter.h"
 
-#include "mavcan/pnp.h"
-#include "mavcan/registerinterface.h"
+#include "libcancl/pnp.h"
+#include "libcancl/registerinterface.h"
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -354,7 +354,7 @@ static int canard_daemon(int argc, char *argv[])
 		goto errout_with_dev;
 	}
 
-	/* MAVCAN extras */
+	/* libcancl functions */
 
 	/* Dynamic NodeId */
 

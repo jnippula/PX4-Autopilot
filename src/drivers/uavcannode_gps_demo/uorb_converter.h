@@ -19,7 +19,7 @@
 #include <canard_dsdl.h>
 
 /* monotonic timestamp */
-#include "mavcan/time.h"
+#include "libcancl/time.h"
 
 
 /****************************************************************************

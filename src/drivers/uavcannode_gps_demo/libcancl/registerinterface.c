@@ -277,4 +277,3 @@ int32_t uavcan_register_interface_list_response(CanardInstance *ins, CanardTrans
 
 	return 1;
 }
-
