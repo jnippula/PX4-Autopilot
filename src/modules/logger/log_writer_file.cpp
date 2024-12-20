@@ -220,6 +220,8 @@ bool LogWriterFile::start_log(LogType type, const char *filename)
 		}
 	}
 
+	bool append_file = false;
+
 #if PX4_CRYPTO
 	bool enc_init = init_logfile_encryption(filename);
 
@@ -228,10 +230,11 @@ bool LogWriterFile::start_log(LogType type, const char *filename)
 		_crypto.close();
 		return false;
 	}
+	append_file = (_algorithm != CRYPTO_NONE);
 
 #endif
 
-	if (_buffers[(int)type].start_log(filename)) {
+	if (_buffers[(int)type].start_log(filename, append_file)) {
 		PX4_INFO("Opened %s log file: %s", log_type_str(type), filename);
 		notify();
 		return true;
@@ -635,13 +638,13 @@ size_t LogWriterFile::LogFileBuffer::get_read_ptr(void **ptr, bool *is_part)
 	}
 }
 
-bool LogWriterFile::LogFileBuffer::start_log(const char *filename)
+bool LogWriterFile::LogFileBuffer::start_log(const char *filename, bool append_file)
 {
-#if defined(PX4_CRYPTO)
-	_fd = ::open(filename, O_APPEND | O_WRONLY, PX4_O_MODE_666);
-#else
-	_fd = ::open(filename, O_CREAT | O_WRONLY, PX4_O_MODE_666);
-#endif
+	if (append_file) {
+		_fd = ::open(filename, O_APPEND | O_WRONLY, PX4_O_MODE_666);
+	} else {
+		_fd = ::open(filename, O_CREAT | O_WRONLY, PX4_O_MODE_666);
+	}
 	_had_write_error.store(false);
 
 	if (_fd < 0) {

@@ -174,7 +174,7 @@ private:
 
 		~LogFileBuffer();
 
-		bool start_log(const char *filename);
+		bool start_log(const char *filename, bool append_file);
 
 		void close_file();
 
